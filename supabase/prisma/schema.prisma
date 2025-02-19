@@ -1,14 +1,73 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User model for minimal user management (future proofing)
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  email        String       @unique
+  passwordHash String
+  role         UserRole
+  simulations  Simulation[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+enum UserRole {
+  MANAGER
+  ADMIN
+}
+
+// Venue model representing each venue
+model Venue {
+  id          Int          @id @default(autoincrement())
+  name        String
+  location    String?
+  width       Float
+  depth       Float
+  height      Float
+  layoutUrl   String? // URL to the 3D model of the venue
+  equipments  Equipment[]
+  simulations Simulation[]
+}
+
+// Equipment (Instrument) model for sound system components
+model Equipment {
+  id            Int            @id @default(autoincrement())
+  name          String
+  type          InstrumentType
+  modelUrl      String // URL to the 3D model file
+  soundUrl      String // URL to the audio file
+  width         Float? // Physical dimensions (optional)
+  depth         Float?
+  height        Float?
+  acousticProps Json? // Acoustic properties as JSON
+  venue         Venue          @relation(fields: [venueId], references: [id])
+  venueId       Int
+}
+
+enum InstrumentType {
+  SPEAKER
+  DRUM
+  GUITAR
+  // Add more types as needed
+}
+
+// Simulation model for storing configuration layouts
+model Simulation {
+  id            Int      @id @default(autoincrement())
+  venue         Venue    @relation(fields: [venueId], references: [id])
+  venueId       Int
+  user          User?    @relation(fields: [userId], references: [id])
+  userId        Int?
+  configuration Json // Stores instrument placement (e.g., [{ instrumentId: 1, x: 0.5, y: 1.2 }, ...])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
